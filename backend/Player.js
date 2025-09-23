@@ -7,7 +7,8 @@
  * Fields:
  * id: The player's unique ID
  * name: custom name created by the player/team
- * score: the player's current score.
+ * scores:a list of score's for each completed round.
+ * answers: a list of the current rounds answers, updated when the player submits their answers, and then is grabbed by gameroom for scoring.
  */
 
 
@@ -16,6 +17,7 @@ class Player {
     this.id = id;
     this.name = name;
     this.score = 0;
+    this.answers = []
   }
 
   addScore(points) {

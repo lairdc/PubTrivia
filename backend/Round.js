@@ -9,3 +9,10 @@
  * Title:  A tring representing the title of the round (ex: History, Geography...)
  *  
  */
+
+class Round {
+    constructor(questions,title){
+        this.questions = questions
+        this.title = title
+    }
+}

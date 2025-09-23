@@ -9,3 +9,12 @@
  * Points: an int representing the value of the question
  * Round: an int representing the # round this question belongs to. (could also be a string for the title of the round)
  */
+
+class Question {
+    constructor(question,answer,points,round){
+        this.question = question
+        this.answer = answer
+        this.points = points
+        this.round = round
+    }
+}

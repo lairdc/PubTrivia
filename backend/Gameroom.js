@@ -6,7 +6,7 @@
  * Fields:
  * code: a string for the join code to give to the players
  * host: the host?
- * players: a list of player id's who are in the game
+ * players: a list of player objects who are in the game
  * rounds: a list of round objects
  */
 
@@ -21,9 +21,76 @@ class GameRoom {
     this.currentRoundIndex = 0;
   }
 
+
+  //Player Management Methods
+
   addPlayer(player) {
     this.players.push(player);
   }
+
+    removePlayer(playerID) {
+    const index = this.players.findIndex(p => p.id === playerID);
+    if (index === -1) return false;
+    this.players.splice(index, 1);
+    return true;
+  }
+
+  getPlayer(playerID) {
+    return this.players.find(p => p.id === playerID) || null;
+  }
+
+  //Round Management
+
+  startGame() {
+
+  }
+
+
+  startNextRound() {
+    if (this.currentRoundIndex + 1 >= this.rounds.length) return false;
+    this.currentRoundIndex += 1;
+    return true;
+  }
+
+  //Answer Handling/Grading
+
+  getAnswersFromPlayer(PlayerID) {
+    player = this.players.find(p => p.id === playerID) || null;
+    return player.answers
+  }
+
+  updateScoreForPlayer(PlayerID, score) {
+    player = this.players.find(p => p.id === playerID) || null;
+    player.scores.push(score);
+  }
+
+
+  gradeRoundForPlayer(playerId, roundIndex, results) {
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error(`Player ${playerId} not found`);
+
+    const round = this.rounds[roundIndex];
+    if (!round) throw new Error(`Round ${roundIndex} not found`);
+
+    let roundPoints = 0;
+
+    for (const { questionId, correct } of results) {
+      const question = round.questions.find(q => q.id === questionId);
+      if (!question) continue; // skip unknown question IDs
+      if (correct) {
+        roundPoints += question.points;
+      }
+    }
+
+    player.score += roundPoints;
+    return roundPoints;
+  }
+
+
+
+
+
+
 }
 
 export default GameRoom;
