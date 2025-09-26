@@ -10,7 +10,7 @@
  * Round: an int representing the # round this question belongs to. (could also be a string for the title of the round)
  */
 
-class Question {
+export default class Question {
     constructor(question,answer,points,round){
         this.question = question
         this.answer = answer

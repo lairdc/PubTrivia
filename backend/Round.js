@@ -10,9 +10,14 @@
  *  
  */
 
-class Round {
-    constructor(questions,title){
-        this.questions = questions
-        this.title = title
-    }
+// Round.js
+export default class Round {
+  constructor(name) {
+    this.name = name;
+    this.questions = [];
+  }
+
+  addQuestion(question) {
+    this.questions.push(question);
+  }
 }
