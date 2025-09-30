@@ -20,6 +20,11 @@ export async function loadQuestionsFromCSV(path) {
 
     // Round header
     if (parts.length === 2 && !isNaN(parts[0])) {
+      // if the previous round had no questions, throw
+      if (currentRound && currentRound.questions.length === 0) {
+        throw new Error(`Round "${currentRound.title}" has no questions.`);
+      }
+
       const roundName = parts[1];
       currentRound = new Round(roundName);
       rounds.push(currentRound);
@@ -37,6 +42,11 @@ export async function loadQuestionsFromCSV(path) {
     else {
       throw new Error(`Invalid row format: ${line}`);
     }
+  }
+
+  // Final check: last round isn’t empty
+  if (currentRound && currentRound.questions.length === 0) {
+    throw new Error(`Round "${currentRound.title}" has no questions.`);
   }
 
   return rounds;

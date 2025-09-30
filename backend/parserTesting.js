@@ -3,7 +3,7 @@ import GameRoom from './GameRoom.js';
 
 async function setupRoom() {
   const room = new GameRoom('ABCD', { id: 'host1', name: 'Host' });
-  const rounds = await loadQuestionsFromCSV('./questions.csv');
+  const rounds = await loadQuestionsFromCSV('./wrong_questions.csv');
   room.rounds = rounds;
   return room;
 }
