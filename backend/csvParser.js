@@ -14,9 +14,11 @@ export async function loadQuestionsFromCSV(path) {
     const trimmed = line.trim();
     if (!trimmed) continue; // skip empty lines
 
-    const parts = trimmed.split(',').map(p => p.trim());
+    // strip optional surrounding quotes
+    const cleaned = trimmed.replace(/^"(.*)"$/, '$1');
+    const parts = cleaned.split(',').map(p => p.trim());
 
-    // Round header row
+    // Round header
     if (parts.length === 2 && !isNaN(parts[0])) {
       const roundName = parts[1];
       currentRound = new Round(roundName);

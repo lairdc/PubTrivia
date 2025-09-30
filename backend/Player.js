@@ -24,3 +24,5 @@ class Player {
     this.score += points;
   }
 }
+
+export default Player;

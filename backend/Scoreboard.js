@@ -16,3 +16,5 @@ class Scoreboard {
         this.points = points
     }
 }
+
+export default Scoreboard;

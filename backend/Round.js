@@ -11,7 +11,7 @@
  */
 
 // Round.js
-export default class Round {
+class Round {
   constructor(name) {
     this.name = name;
     this.questions = [];
@@ -21,3 +21,5 @@ export default class Round {
     this.questions.push(question);
   }
 }
+
+export default Round;

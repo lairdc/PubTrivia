@@ -19,17 +19,17 @@ async function setupRoom() {
     console.log(`Number of Rounds: ${room.rounds.length}`);
 
     room.rounds.forEach((round, rIdx) => {
-      console.log(`\nRound ${rIdx + 1}: ${round.title}`);
+      console.log(`\nRound ${rIdx + 1}: ${round.name}`);
       round.questions.forEach((q, qIdx) => {
         console.log(
-          `  Q${qIdx + 1}: ${q.text} | Answer: ${q.answer} | Points: ${q.points}`
+          `  Q${qIdx + 1}: ${q.question} | Answer: ${q.answer} | Points: ${q.points}`
         );
       });
     });
 
-    console.log('\n✅ Parsing complete, data looks good.');
+    console.log('\nParsing complete');
   } catch (err) {
-    console.error('❌ Error while testing parser:', err);
+    console.error('Error while testing parser:', err);
   }
 })();
 
