@@ -19,23 +19,23 @@ export async function loadQuestionsFromCSV(path) {
     const parts = cleaned.split(',').map(p => p.trim());
 
     // Round header
-    if (parts.length === 2 && !isNaN(parts[0])) {
+    if (parts.length === 1 && (/[a-zA-Z]/.test(parts[0]) || /\d/.test(parts[0]))) {
       // if the previous round had no questions, throw
       if (currentRound && currentRound.questions.length === 0) {
         throw new Error(`Round "${currentRound.title}" has no questions.`);
       }
 
-      const roundName = parts[1];
+      const roundName = parts[0];
       currentRound = new Round(roundName);
       rounds.push(currentRound);
     }
     // Question row
-    else if (parts.length === 4 && !isNaN(parts[0])) {
+    else if (parts.length === 3) {
       if (!currentRound) throw new Error(`Question before any round: ${line}`);
 
-      const questionText = parts[1];
-      const answerText = parts[2];
-      const points = parseInt(parts[3], 10);
+      const questionText = parts[0];
+      const answerText = parts[1];
+      const points = parseInt(parts[2], 10);
 
       currentRound.addQuestion(new Question(questionText, answerText, points));
     }
