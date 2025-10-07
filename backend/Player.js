@@ -12,12 +12,20 @@
  */
 
 
+// Player.js
 class Player {
   constructor(id, name) {
     this.id = id;
     this.name = name;
     this.score = 0;
-    this.answers = []
+    this.answers = {}; // roundIndex -> [answers]
+  }
+
+  submitAnswers(roundIndex, answers) {
+    if (!Array.isArray(answers) || answers.length === 0) {
+      throw new Error(`Invalid answers submitted by ${this.name}`);
+    }
+    this.answers[roundIndex] = answers;
   }
 
   addScore(points) {

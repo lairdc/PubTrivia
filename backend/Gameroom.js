@@ -1,5 +1,5 @@
 /**
- * Gameroom.js
+ * GameRoom.js
  * ----------
  * Manages a game of trivia
  * 
@@ -87,7 +87,16 @@ class GameRoom {
     return roundPoints;
   }
 
+  // GameRoom.js
+  recordAnswers(playerId, roundIndex, answers) {
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error(`Player ${playerId} not found`);
+    const round = this.rounds[roundIndex];
+    if (!round) throw new Error(`Invalid round index ${roundIndex}`);
 
+    player.submitAnswers(roundIndex, answers);
+    console.log(`${player.name} submitted answers for Round ${roundIndex + 1}`);
+  }
 
 
 

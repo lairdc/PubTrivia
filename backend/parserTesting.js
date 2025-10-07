@@ -1,5 +1,5 @@
 import { loadQuestionsFromCSV } from './csvParser.js';
-import GameRoom from './GameRoom.js';
+//import GameRoom from './GameRoom.js';
 
 async function setupRoom() {
   const room = new GameRoom('ABCD', { id: 'host1', name: 'Host' });
