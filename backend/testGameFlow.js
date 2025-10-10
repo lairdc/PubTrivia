@@ -1,4 +1,4 @@
-//import GameRoom from './GameRoom.js';
+import GameRoom from './Gameroom.js';
 import Player from './Player.js';
 import { loadQuestionsFromCSV } from './csvParser.js';
 
@@ -7,16 +7,16 @@ async function simulateGame() {
   room.rounds = await loadQuestionsFromCSV('./questions.csv');
 
   // Add players
-  const alice = new Player('p1', 'Alice');
-  const bob = new Player('p2', 'Bob');
-  room.addPlayer(alice);
-  room.addPlayer(bob);
+  const p1 = new Player('p1', 'p1');
+  const p2 = new Player('p2', 'p2');
+  room.addPlayer(p1);
+  room.addPlayer(p2);
 
   console.log(`\nStarting Round 1: ${room.rounds[0].name}`);
 
   // Players submit answers
-  alice.submitAnswers(0, ['George Washington', 'John Wilkes Booth']);
-  bob.submitAnswers(0, ['Abraham Lincoln', 'John Wilkes Booth']);
+  p1.submitAnswers(0, ['p1a1', 'p1a2']);
+  p2.submitAnswers(0, ['p2a1', 'p2a2']);
 
   // Grade round
   room.gradeRound(0);

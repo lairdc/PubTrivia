@@ -10,6 +10,7 @@
  * rounds: a list of round objects
  */
 
+import readline from 'readline';
 import Player from './Player.js';
 import Round from './Round.js'
 
@@ -98,7 +99,47 @@ class GameRoom {
     console.log(`${player.name} submitted answers for Round ${roundIndex + 1}`);
   }
 
+  async gradeRound(roundIndex) {
+    const round = this.rounds[roundIndex];
+    if (!round) throw new Error(`Round ${roundIndex} does not exist.`);
 
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    console.log(`\n=== Grading Round: ${round.name} ===`);
+
+    for (let qIndex = 0; qIndex < round.questions.length; qIndex++) {
+      const question = round.questions[qIndex];
+      console.log(`\nQuestion ${qIndex + 1}: ${question.text}`);
+      console.log(`Correct answer: ${question.answer}`);
+
+      for (const player of this.players) {
+        const playerAnswer = player.answers?.[roundIndex]?.[qIndex] ?? '(no answer)';
+        console.log(`\n${player.name}'s answer: ${playerAnswer}`);
+
+        const result = await new Promise(resolve => {
+          rl.question(`Mark correct? (y/n): `, ans => {
+            resolve(ans.trim().toLowerCase() === 'y');
+          });
+        });
+
+        if (result) {
+          player.score += question.points;
+          console.log(`✅ ${player.name} +${question.points} points`);
+        } else {
+          console.log(`❌ ${player.name} no points`);
+        }
+      }
+    }
+
+    rl.close();
+    console.log(`\n=== Round Complete ===`);
+    for (const player of this.players) {
+      console.log(`${player.name}: ${player.score} points`);
+    }
+  }
 
 
 }
