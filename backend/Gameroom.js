@@ -127,9 +127,9 @@ class GameRoom {
 
         if (result) {
           player.score += question.points;
-          console.log(`✅ ${player.name} +${question.points} points`);
+          console.log(`${player.name} +${question.points} points`);
         } else {
-          console.log(`❌ ${player.name} no points`);
+          console.log(`${player.name} no points`);
         }
       }
     }
