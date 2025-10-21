@@ -14,15 +14,15 @@ async function setupRoom() {
     const room = await setupRoom();
 
     console.log('=== Game Room Summary ===');
-    console.log('Join Code: ${room.code}');
-    console.log('Host: ${room.host.name}');
-    console.log('Number of Rounds: ${room.rounds.length}');
+    console.log(`Join Code: ${room.code}`);
+    console.log(`Host: ${room.host.name}`);
+    console.log(`Number of Rounds: ${room.rounds.length}`);
 
     room.rounds.forEach((round, rIdx) => {
-      console.log('\nRound ${rIdx + 1}: ${round.name}');
+      console.log(`\nRound ${rIdx + 1}: ${round.name}`);
       round.questions.forEach((q, qIdx) => {
         console.log(
-          '  Q${qIdx + 1}: ${q.question} | Answer: ${q.answer} | Points: ${q.points}'
+          `  Q${qIdx + 1}: ${q.question} | Answer: ${q.answer} | Points: ${q.points}`
         );
       });
     });

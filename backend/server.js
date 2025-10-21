@@ -4,6 +4,8 @@ import bodyParser from 'body-parser';
 import { loadQuestionsFromCSV } from './csvParser.js';
 import GameRoom from './Gameroom.js';
 import gameRoutes from './routes/gameRoutes.js';
+import gradingRoutes from './routes/gradingRoutes.js';
+
 
 const app = express();
 const PORT = 3000;
@@ -15,16 +17,22 @@ app.use(bodyParser.json());
 const room = new GameRoom('ABCD', { id: 'host1', name: 'Host' });
 room.rounds = await loadQuestionsFromCSV('./questions.csv');
 
-// Attach room to req for route access
+// attach room to req for route access
 app.use((req, res, next) => {
   req.room = room;
   next();
 });
 
-// Mount routes
-app.use('/api/game', gameRoutes);
 
-// Start server
+
+// start server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
+app.get('/', (req, res) => {
+  res.send('PubTrivia server is running!');
+});
+
+app.use('/api/game', gameRoutes);
+app.use('/api/grade', gradingRoutes);

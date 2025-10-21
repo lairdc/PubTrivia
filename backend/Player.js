@@ -23,7 +23,7 @@ class Player {
 
   submitAnswers(roundIndex, answers) {
     if (!Array.isArray(answers) || answers.length === 0) {
-      throw new Error('Invalid answers submitted by ${this.name}');
+      throw new Error(`Invalid answers submitted by ${this.name}`);
     }
     this.answers[roundIndex] = answers;
   }
