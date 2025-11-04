@@ -51,5 +51,4 @@ starting server: node server.js
 (in ^^ cmd) grade p1: curl -X POST http://localhost:3000/api/grade/grade -H "Content-Type: application/json" -d "{\"playerId\":\"p1\",\"roundIndex\":0,\"results\":[true,false]}"
 (in ^^ cmd) grade p2: curl -X POST http://localhost:3000/api/grade/grade -H "Content-Type: application/json" -d "{\"playerId\":\"p2\",\"roundIndex\":0,\"results\":[false,true]}"
 (in ^^ cmd) view scoreboard: curl http://localhost:3000/api/game/scoreboard
-
 */
