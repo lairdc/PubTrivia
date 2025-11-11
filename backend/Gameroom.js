@@ -26,11 +26,20 @@ class GameRoom {
 
   //Player Management Methods
 
-  addPlayer(player) {
+addPlayer(player) {
+  const exists = this.players.some(
+    p => p.id === player.id || p.name === player.name
+  );
+
+  if (!exists) {
     this.players.push(player);
+    return true; // success
   }
 
-    removePlayer(playerID) {
+  return false; // duplicate found
+}
+
+  removePlayer(playerID) {
     const index = this.players.findIndex(p => p.id === playerID);
     if (index === -1) return false;
     this.players.splice(index, 1);

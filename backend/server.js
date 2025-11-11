@@ -5,6 +5,9 @@ import { loadQuestionsFromCSV } from './csvParser.js';
 import GameRoom from './Gameroom.js';
 import gameRoutes from './routes/gameRoutes.js';
 import gradingRoutes from './routes/gradingRoutes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 
 
 const app = express();
@@ -12,6 +15,15 @@ const PORT = 3000;
 
 // Middleware
 app.use(bodyParser.json());
+
+app.use(express.static("public"));
+
+// Needed because ES modules don’t have __dirname by default
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve the frontend folder
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Initialize in-memory game room (you can make this dynamic later)
 const room = new GameRoom('ABCD', { id: 'host1', name: 'Host' });

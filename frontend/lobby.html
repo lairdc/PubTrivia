@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby | PubTrivia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+    }
+
+    header {
+      background-color: #333;
+      color: white;
+      width: 100%;
+      text-align: center;
+      padding: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      margin-top: 2rem;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    li {
+      background: #eaeaea;
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      border-radius: 5px;
+    }
+
+    .waiting {
+      color: #666;
+      margin-top: 1rem;
+    }
+
+    button {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.25rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <header>PubTrivia Lobby</header>
+  <div class="container">
+    <h2 id="playerName">Welcome, Player!</h2>
+    <p>Room Code: <strong id="roomCode">ABCD</strong></p>
+
+    <h3>Players in the room:</h3>
+    <ul id="playerList">
+      <li>Loading players...</li>
+    </ul>
+
+    <p class="waiting">Waiting for the host to start the game...</p>
+
+    <button id="refreshBtn">Refresh Now</button>
+  </div>
+
+  <script>
+    const playerName = localStorage.getItem('playerName') || 'Unknown';
+    const roomCode = localStorage.getItem('roomCode') || 'ABCD';
+    document.getElementById('playerName').textContent = `Welcome, ${playerName}!`;
+    document.getElementById('roomCode').textContent = roomCode;
+
+    const playerListEl = document.getElementById('playerList');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    async function fetchPlayers() {
+      try {
+        const res = await fetch('/api/game/scoreboard');
+        const data = await res.json();
+
+        playerListEl.innerHTML = '';
+        data.forEach(p => {
+          const li = document.createElement('li');
+          li.textContent = `${p.name} (${p.score ?? 0} pts)`;
+          playerListEl.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Error fetching player list:', err);
+        playerListEl.innerHTML = '<li>Failed to load players.</li>';
+      }
+    }
+
+    refreshBtn.addEventListener('click', fetchPlayers);
+
+    // Auto-refresh every 3 seconds
+    setInterval(fetchPlayers, 3000);
+
+    fetchPlayers();
+  </script>
+</body>
+</html>
