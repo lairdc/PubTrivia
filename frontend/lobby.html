@@ -13,7 +13,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
     }
 
     header {
@@ -54,7 +54,7 @@
     }
 
     button {
-      margin-top: 1.5rem;
+      margin-top: 1rem;
       padding: 0.75rem 1.25rem;
       background: #007bff;
       color: white;
@@ -71,6 +71,7 @@
 </head>
 <body>
   <header>PubTrivia Lobby</header>
+
   <div class="container">
     <h2 id="playerName">Welcome, Player!</h2>
     <p>Room Code: <strong id="roomCode">ABCD</strong></p>
@@ -80,43 +81,120 @@
       <li>Loading players...</li>
     </ul>
 
-    <p class="waiting">Waiting for the host to start the game...</p>
+    <p class="waiting" id="waitingText">Waiting for the host to start the game...</p>
 
+    <button id="startGameBtn" style="display:none;">Start Game</button>
     <button id="refreshBtn">Refresh Now</button>
   </div>
 
   <script>
-    const playerName = localStorage.getItem('playerName') || 'Unknown';
-    const roomCode = localStorage.getItem('roomCode') || 'ABCD';
-    document.getElementById('playerName').textContent = `Welcome, ${playerName}!`;
-    document.getElementById('roomCode').textContent = roomCode;
+    const playerId = localStorage.getItem('playerId');
+    const playerName = localStorage.getItem('playerName');
+    const lobbyCode = localStorage.getItem('lobbyCode');
 
+    // If missing player info, redirect to join page
+    if (!playerId || !playerName || !lobbyCode) {
+      alert('Missing player or lobby info. Redirecting to join page.');
+      window.location.href = 'join.html';
+    }
+
+    const playerNameEl = document.getElementById('playerName');
+    const roomCodeEl = document.getElementById('roomCode');
     const playerListEl = document.getElementById('playerList');
+    const startGameBtn = document.getElementById('startGameBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const waitingText = document.getElementById('waitingText');
 
-    async function fetchPlayers() {
+    playerNameEl.textContent = `Welcome, ${playerName}!`;
+    roomCodeEl.textContent = lobbyCode;
+
+    let gameStarted = false;
+    let isHost = false;
+
+    // Fetch lobby info and determine host
+    async function fetchLobbyInfo() {
       try {
-        const res = await fetch('/api/game/scoreboard');
-        const data = await res.json();
+        const res = await fetch(`/api/game/scoreboard?code=${lobbyCode}`);
+        const players = await res.json();
 
         playerListEl.innerHTML = '';
-        data.forEach(p => {
-          const li = document.createElement('li');
-          li.textContent = `${p.name} (${p.score ?? 0} pts)`;
-          playerListEl.appendChild(li);
-        });
+        if (players.length === 0) {
+          playerListEl.innerHTML = '<li>No players in the room yet.</li>';
+        } else {
+          players.forEach(p => {
+            const li = document.createElement('li');
+            li.textContent = `${p.name} (${p.score ?? 0} pts)`;
+            playerListEl.appendChild(li);
+          });
+
+          // Determine host: first player in the list
+          if (players[0].id === playerId) {
+            isHost = true;
+            startGameBtn.style.display = 'block';
+          }
+        }
       } catch (err) {
-        console.error('Error fetching player list:', err);
+        console.error('Error fetching players:', err);
         playerListEl.innerHTML = '<li>Failed to load players.</li>';
       }
     }
 
-    refreshBtn.addEventListener('click', fetchPlayers);
+    // Refresh button
+    refreshBtn.addEventListener('click', fetchLobbyInfo);
 
-    // Auto-refresh every 3 seconds
-    setInterval(fetchPlayers, 3000);
+    // Auto-refresh every 2 seconds
+    setInterval(fetchLobbyInfo, 2000);
+    fetchLobbyInfo();
 
-    fetchPlayers();
+    // Host: start game button
+    startGameBtn.addEventListener('click', async () => {
+      try {
+        const resCheck = await fetch(`/api/game/scoreboard?code=${lobbyCode}`);
+        const players = await resCheck.json();
+        const otherPlayers = players.filter(p => p.id !== playerId);
+
+        if (otherPlayers.length === 0) {
+          alert('You need at least one other player to start the game.');
+          return;
+        }
+
+        const res = await fetch(`/api/game/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: lobbyCode, playerId })
+        });
+
+        if (res.ok) {
+          gameStarted = true;
+          window.location.href = 'submit.html';
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to start game.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error starting game.');
+      }
+    });
+
+    // Poll for non-hosts to detect if game started
+    async function checkGameStarted() {
+      if (isHost || gameStarted) return;
+
+      try {
+        const res = await fetch(`/api/game/status?code=${lobbyCode}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.started) {
+          gameStarted = true;
+          window.location.href = 'submit.html';
+        }
+      } catch (err) {
+        console.error('Error checking game status:', err);
+      }
+    }
+
+    setInterval(checkGameStarted, 2000);
   </script>
 </body>
 </html>

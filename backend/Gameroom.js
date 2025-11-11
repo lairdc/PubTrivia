@@ -21,7 +21,9 @@ class GameRoom {
     this.players = [];
     this.rounds = [];
     this.currentRoundIndex = 0;
+    this.started = false
   }
+
 
 
   //Player Management Methods
@@ -53,7 +55,7 @@ addPlayer(player) {
   //Round Management
 
   startGame() {
-
+    this.started = true;
   }
 
 
