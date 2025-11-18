@@ -40,17 +40,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const { ok, result } = await postJSON("/api/game/create", data);
 
       if (ok) {
-        // Save host info and lobby code
+        // Save host info (optional)
         localStorage.setItem("playerId", data.hostId);
         localStorage.setItem("playerName", data.hostName);
         localStorage.setItem("lobbyCode", result.lobbyCode);
 
-        window.location.href = "lobby.html";
+        // 👇 IMPORTANT: pass host info to the lobby page
+        window.location.href =
+          `lobby.html?code=${result.lobbyCode}&playerId=${data.hostId}&name=${data.hostName}&isHost=true`;
       } else {
         output.textContent = result.error || "Failed to create lobby.";
       }
     });
   }
+
 
   // --- JOIN EXISTING LOBBY ---
   if (joinForm) {

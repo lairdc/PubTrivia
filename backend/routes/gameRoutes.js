@@ -3,6 +3,18 @@ import express from 'express';
 import Player from '../Player.js';
 import GameRoom from '../Gameroom.js';
 
+
+
+function generateRoomCode() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+        code += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return code;
+}
+
+
 const router = express.Router();
 
 // --- Global map of all lobbies ---
@@ -10,43 +22,51 @@ const lobbies = {}; // key: lobbyCode, value: GameRoom instance
 
 // --- CREATE LOBBY ---
 router.post('/create', (req, res) => {
-  const { hostId, hostName } = req.body;
+  const name = req.body.name;
+  const code = generateRoomCode();
 
-  if (!hostId || !hostName) {
-    return res.status(400).json({ error: 'Missing host ID or name.' });
-  }
+  const hostId = crypto.randomUUID(); // or Date.now()
 
-  // Generate a unique 4-letter lobby code
-  let lobbyCode;
-  do {
-    lobbyCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-  } while (lobbies[lobbyCode]);
+  const room = new GameRoom(code, {
+    id: hostId,
+    name: name,
+    isHost: true
+  });
 
-  // Create new GameRoom with host as first player
-  const newRoom = new GameRoom(lobbyCode, { id: hostId, name: hostName });
-  lobbies[lobbyCode] = newRoom;
+  lobbies[code] = room;
 
-  res.status(200).json({ message: 'Lobby created.', lobbyCode });
+  res.json({
+    lobbyCode: code, 
+    playerId: hostId,
+    isHost: true
+  });
+
 });
+
 
 // --- JOIN LOBBY ---
 router.post('/join', (req, res) => {
-  const { code, id, name } = req.body;
-
-  if (!code || !id || !name) {
-    return res.status(400).json({ error: 'Missing lobby code, player id, or name.' });
-  }
-
+  const { name, code } = req.body;
   const room = lobbies[code];
-  if (!room) return res.status(404).json({ error: 'Lobby not found.' });
 
-  const success = room.addPlayer({ id, name });
-  if (!success) {
-    return res.status(400).json({ error: 'Player with this ID or name already exists.' });
+  if (!room) {
+    return res.status(404).json({ error: "Room not found" });
   }
 
-  res.status(200).json({ message: 'Player joined successfully.', players: room.players });
+  const playerId = crypto.randomUUID();
+
+  room.addPlayer({
+    id: playerId,
+    name: name,
+    isHost: false
+  });
+
+  res.json({
+    success: true,
+    playerId: playerId
+  });
 });
+
 
 // --- SUBMIT ANSWERS ---
 router.post('/submit', (req, res) => {

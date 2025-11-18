@@ -18,7 +18,7 @@ class GameRoom {
   constructor(code, host) {
     this.code = code;
     this.host = host;
-    this.players = [];
+    this.players = [host];
     this.rounds = [];
     this.currentRoundIndex = 0;
     this.started = false

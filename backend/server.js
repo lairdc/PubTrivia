@@ -25,15 +25,6 @@ const __dirname = path.dirname(__filename);
 // Serve the frontend folder
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Initialize in-memory game room (you can make this dynamic later)
-const room = new GameRoom('ABCD', { id: 'host1', name: 'Host' });
-room.rounds = await loadQuestionsFromCSV('./questions.csv');
-
-// attach room to req for route access
-app.use((req, res, next) => {
-  req.room = room;
-  next();
-});
 
 
 
