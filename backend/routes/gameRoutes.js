@@ -25,23 +25,19 @@ router.post('/create', (req, res) => {
   const name = req.body.name;
   const code = generateRoomCode();
 
-  const hostId = crypto.randomUUID(); // or Date.now()
+  const hostId = crypto.randomUUID();
 
-  const room = new GameRoom(code, {
-    id: hostId,
-    name: name,
-    isHost: true
-  });
+  const room = new GameRoom(code, hostId, name);
 
   lobbies[code] = room;
 
   res.json({
-    lobbyCode: code, 
+    lobbyCode: code,
     playerId: hostId,
     isHost: true
   });
-
 });
+
 
 
 // --- JOIN LOBBY ---
@@ -94,13 +90,18 @@ router.get('/scoreboard', (req, res) => {
 
   if (!room) return res.status(404).json({ error: 'Lobby not found.' });
 
-  const scoreboard = room.players.map(p => ({
-    id: p.id,
-    name: p.name,
-    score: p.score ?? 0
-  }));
+  res.json({
+    host: room.host ? {
+      id: room.host.id,
+      name: room.host.name
+    } : null,
 
-  res.json(scoreboard);
+    players: room.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      score: p.score ?? 0
+    }))
+  });
 });
 
 // --- NEXT ROUND ---

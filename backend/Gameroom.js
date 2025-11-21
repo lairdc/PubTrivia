@@ -15,14 +15,15 @@ import Player from './Player.js';
 import Round from './Round.js'
 
 class GameRoom {
-  constructor(code, host) {
+  constructor(code, hostId, hostName) {
     this.code = code;
-    this.host = host;
-    this.players = [host];
+    this.host = { id: hostId, name: hostName }; // host is not a player
+    this.players = []; // players only
     this.rounds = [];
     this.currentRoundIndex = 0;
-    this.started = false
+    this.started = false;
   }
+
 
 
 
