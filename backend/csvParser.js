@@ -1,50 +1,52 @@
-import fs from 'fs';
-import readline from 'readline';
+// csvParser.js
 import Round from './Round.js';
 import Question from './Question.js';
 
-export async function loadQuestionsFromCSV(path) {
+export async function loadQuestionsFromCSVString(csvText) {
+  const lines = csvText.split(/\r?\n/);
   const rounds = [];
   let currentRound = null;
 
-  const fileStream = fs.createReadStream(path);
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  for (let rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
 
-  for await (const line of rl) {
-    const trimmed = line.trim();
-    if (!trimmed) continue; // skip empty lines
+    // remove optional surrounding quotes
+    const cleaned = trimmed.replace(/^"(.*)"$/, "$1");
+    const parts = cleaned.split(',').map(x => x.trim());
 
-    // strip optional surrounding quotes
-    const cleaned = trimmed.replace(/^"(.*)"$/, '$1');
-    const parts = cleaned.split(',').map(p => p.trim());
-
-    // Round header
+    // Round title (1 column)
     if (parts.length === 1 && (/[a-zA-Z]/.test(parts[0]) || /\d/.test(parts[0]))) {
-      // if the previous round had no questions, throw
       if (currentRound && currentRound.questions.length === 0) {
         throw new Error(`Round "${currentRound.title}" has no questions.`);
       }
 
-      const roundName = parts[0];
-      currentRound = new Round(roundName);
+      const roundTitle = parts[0];
+      currentRound = new Round(roundTitle);
       rounds.push(currentRound);
+      continue;
     }
-    // Question row
-    else if (parts.length === 3) {
-      if (!currentRound) throw new Error(`Question before any round: ${line}`);
 
-      const questionText = parts[0];
-      const answerText = parts[1];
-      const points = parseInt(parts[2], 10);
+    // Question row (3 columns)
+    if (parts.length === 3) {
+      if (!currentRound)
+        throw new Error(`Question found before any round header: "${rawLine}"`);
+
+      const [questionText, answerText, pointsText] = parts;
+      const points = parseInt(pointsText, 10);
+
+      if (isNaN(points)) {
+        throw new Error(`Invalid point value in line: "${rawLine}"`);
+      }
 
       currentRound.addQuestion(new Question(questionText, answerText, points));
+      continue;
     }
-    else {
-      throw new Error(`Invalid row format: ${line}`);
-    }
+
+    throw new Error(`Invalid row format: "${rawLine}"`);
   }
 
-  // Final check: last round isn’t empty
+  // Ensure last round has at least one question
   if (currentRound && currentRound.questions.length === 0) {
     throw new Error(`Round "${currentRound.title}" has no questions.`);
   }

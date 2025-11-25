@@ -15,7 +15,6 @@
   }
 </script>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,7 +71,7 @@
     }
 
     button {
-      margin-top: 1rem;
+      margin-top: 0.5rem;
       padding: 0.75rem 1.25rem;
       background: #007bff;
       color: white;
@@ -84,6 +83,27 @@
 
     button:hover {
       background: #0056b3;
+    }
+
+    .host-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background-color: #f0f8ff;
+      text-align: left;
+    }
+
+    .status {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .status.error {
+      color: #b00020;
+    }
+
+    .status.success {
+      color: #007700;
     }
   </style>
 </head>
@@ -101,7 +121,18 @@
 
     <p class="waiting" id="waitingText">Waiting for the host to start the game...</p>
 
-    <button id="startGameBtn" style="display:none;">Start Game</button>
+    <!-- Host-only controls -->
+    <div id="hostUploadSection" class="host-section" style="display:none;">
+      <h3>Host Controls</h3>
+      <p>Upload a CSV with rounds, questions, answers, and point values before starting the game.</p>
+      <input type="file" id="csvFile" accept=".csv">
+      <br>
+      <button id="uploadCsvBtn">Upload CSV</button>
+      <button id="removeCsvBtn">Remove CSV</button>
+      <div id="uploadStatus" class="status"></div>
+    </div>
+
+    <button id="startGameBtn" style="display:none;" disabled>Start Game</button>
     <button id="refreshBtn">Refresh</button>
   </div>
 
@@ -122,26 +153,39 @@
     const startGameBtn = document.getElementById('startGameBtn');
     const waitingText = document.getElementById('waitingText');
 
+    const hostUploadSection = document.getElementById('hostUploadSection');
+    const csvFileInput = document.getElementById('csvFile');
+    const uploadCsvBtn = document.getElementById('uploadCsvBtn');
+    const removeCsvBtn = document.getElementById('removeCsvBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+
     let isHost = false;
-    let gameStarted = false;
+    let hasQuestions = false;
 
     async function fetchLobbyInfo() {
       try {
         const res = await fetch(`/api/game/scoreboard?code=${lobbyCode}`);
         const data = await res.json();
 
+        if (!res.ok) {
+          playerListEl.innerHTML = '<li>Error loading players.</li>';
+          console.error('Scoreboard error:', data.error);
+          return;
+        }
+
         const host = data.host;
-        const players = data.players;
+        const players = data.players || [];
+        hasQuestions = !!data.hasQuestions;
 
         playerListEl.innerHTML = '';
 
-        // Show host clearly
-        const hostItem = document.createElement('li');
-        hostItem.textContent = `${host.name} (Host)`;
-        hostItem.style.background = "#d7ffd9";
-        playerListEl.appendChild(hostItem);
+        if (host) {
+          const hostItem = document.createElement('li');
+          hostItem.textContent = `${host.name} (Host)`;
+          hostItem.style.background = "#d7ffd9";
+          playerListEl.appendChild(hostItem);
+        }
 
-        // Show all players
         players.forEach(p => {
           const li = document.createElement('li');
           li.textContent = `${p.name} (${p.score ?? 0} pts)`;
@@ -149,13 +193,29 @@
         });
 
         // Determine if *you* are the host
-        if (host.id === playerId) {
+        if (host && host.id === playerId) {
           isHost = true;
-          startGameBtn.style.display = 'block';
-          waitingText.style.display = 'none';
+          hostUploadSection.style.display = 'block';
+
+          waitingText.textContent = 'Upload a CSV and wait for at least one player, then start the game.';
+          waitingText.style.display = 'block';
+
+          startGameBtn.style.display = 'inline-block';
+
+          // Enable Start Game only if we have at least one player AND questions loaded
+          const canStart = players.length > 0 && hasQuestions;
+          startGameBtn.disabled = !canStart;
+
         } else {
           isHost = false;
+          hostUploadSection.style.display = 'none';
           startGameBtn.style.display = 'none';
+
+          if (!hasQuestions) {
+            waitingText.textContent = 'Waiting for the host to upload questions and start the game...';
+          } else {
+            waitingText.textContent = 'Waiting for the host to start the game...';
+          }
           waitingText.style.display = 'block';
         }
       } catch (err) {
@@ -170,8 +230,86 @@
     setInterval(fetchLobbyInfo, 2000);
     fetchLobbyInfo();
 
+    // Host: upload CSV
+    uploadCsvBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      const file = csvFileInput.files[0];
+      if (!file) {
+        uploadStatus.textContent = 'Please choose a CSV file first.';
+        uploadStatus.className = 'status error';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('code', lobbyCode);
+      formData.append('playerId', playerId);
+
+      uploadStatus.textContent = 'Uploading...';
+      uploadStatus.className = 'status';
+
+      try {
+        const res = await fetch('/api/game/uploadQuestions', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          uploadStatus.textContent = `Uploaded successfully. Rounds loaded: ${data.roundCount ?? 'N/A'}.`;
+          uploadStatus.className = 'status success';
+          hasQuestions = true;
+          fetchLobbyInfo();
+        } else {
+          uploadStatus.textContent = data.error || 'Failed to upload CSV.';
+          uploadStatus.className = 'status error';
+        }
+      } catch (err) {
+        console.error('Upload error:', err);
+        uploadStatus.textContent = 'Server error while uploading.';
+        uploadStatus.className = 'status error';
+      }
+    });
+
+    // Host: remove CSV
+    removeCsvBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      uploadStatus.textContent = 'Removing questions...';
+      uploadStatus.className = 'status';
+
+      try {
+        const res = await fetch('/api/game/removeQuestions', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: lobbyCode, playerId })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          uploadStatus.textContent = data.message || 'Questions removed.';
+          uploadStatus.className = 'status success';
+          hasQuestions = false;
+          startGameBtn.disabled = true;
+          fetchLobbyInfo();
+        } else {
+          uploadStatus.textContent = data.error || 'Failed to remove questions.';
+          uploadStatus.className = 'status error';
+        }
+      } catch (err) {
+        console.error('Remove error:', err);
+        uploadStatus.textContent = 'Server error while removing questions.';
+        uploadStatus.className = 'status error';
+      }
+    });
+
     // Host starts game
     startGameBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
       try {
         const res = await fetch('/api/game/start', {
           method: 'POST',
@@ -179,10 +317,12 @@
           body: JSON.stringify({ code: lobbyCode, playerId })
         });
 
+        const data = await res.json();
+
         if (res.ok) {
           window.location.href = 'submit.html';
         } else {
-          alert('Failed to start game.');
+          alert(data.error || 'Failed to start game.');
         }
       } catch (err) {
         alert('Server error starting game.');
