@@ -1,3 +1,21 @@
+<script>
+  // Read URL parameters
+  const url = new URL(window.location.href);
+  const paramCode = url.searchParams.get("code");
+  const paramId = url.searchParams.get("playerId");
+  const paramName = url.searchParams.get("name");
+  const paramHost = url.searchParams.get("isHost");
+
+  // If parameters exist, store them in localStorage
+  if (paramCode && paramId && paramName) {
+    localStorage.setItem("lobbyCode", paramCode);
+    localStorage.setItem("playerId", paramId);
+    localStorage.setItem("playerName", paramName);
+    localStorage.setItem("isHost", paramHost === "true");
+  }
+</script>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
