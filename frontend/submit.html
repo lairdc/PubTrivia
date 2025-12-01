@@ -1,19 +1,517 @@
+
+<script>
+  // Freeze identity so this tab can never accidentally overwrite it.
+  const identityLocked = true;
+</script>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Submit Answers</title>
+  <title>Round | PubTrivia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      background: #333;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+    }
+    .container {
+      background: white;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 800px;
+    }
+    h2, h3 {
+      margin-top: 0;
+    }
+    .question {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button.primary {
+      background: #007bff;
+      color: white;
+    }
+    button.primary:hover {
+      background: #0056b3;
+    }
+    button.success {
+      background: #28a745;
+      color: white;
+    }
+    button.danger {
+      background: #dc3545;
+      color: white;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .status.error {
+      color: #b00020;
+    }
+    .status.success {
+      color: #007700;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    .grading-card {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #fffbe7;
+      border: 1px solid #eedc82;
+    }
+  </style>
 </head>
 <body>
-  <h1>Submit Answers</h1>
-  <form id="submitForm">
-    <label>Player ID: <input id="playerId" required></label><br>
-    <label>Round Index: <input id="roundIndex" type="number" value="0" required></label><br>
-    <label>Answers (comma-separated): <input id="answers" required></label><br>
-    <button type="submit">Submit</button>
-  </form>
-  <pre id="output"></pre>
+  <header>PubTrivia Round</header>
 
-  <script src="main.js"></script>
+  <div class="container">
+    <h2 id="roundTitle">Round</h2>
+    <p id="roleText"></p>
+
+    <!-- Player answer form -->
+    <div id="playerSection" style="display:none;">
+      <form id="answerForm">
+        <div id="questionList"></div>
+        <button type="submit" class="primary" id="submitAnswersBtn">Submit Answers</button>
+      </form>
+      <div id="playerStatus" class="status"></div>
+    </div>
+
+    <!-- Host view for questions & grading -->
+    <div id="hostSection" style="display:none;">
+      <div id="hostQuestions">
+        <h3>Questions for this round</h3>
+        <div id="hostQuestionList"></div>
+        <p id="submissionInfo"></p>
+        <button id="startGradingBtn" class="primary">Start Grading</button>
+        <div id="hostStatus" class="status"></div>
+      </div>
+
+      <!-- Grading UI -->
+      <div id="gradingSection" style="display:none;">
+        <h3>Grading Answers</h3>
+        <div id="gradingCard" class="grading-card">
+          <p><strong>Question:</strong> <span id="gradeQuestionText"></span></p>
+          <p><strong>Correct answer:</strong> <span id="gradeCorrectAnswer"></span></p>
+          <p><strong>Team:</strong> <span id="gradeTeamName"></span></p>
+          <p><strong>Team's answer:</strong> <span id="gradeTeamAnswer"></span></p>
+          <p><strong>Points:</strong> <span id="gradePoints"></span></p>
+          <p><strong>Progress:</strong> <span id="gradeProgress"></span></p>
+
+          <button id="gradeCorrectBtn" class="success">✔ Correct</button>
+          <button id="gradeIncorrectBtn" class="danger">✘ Incorrect</button>
+        </div>
+        <div id="gradingStatus" class="status"></div>
+        <button id="nextRoundBtn" class="primary" style="display:none;">Next Round</button>
+      </div>
+    </div>
+
+    <!-- Scoreboard (everyone sees) -->
+    <div id="scoreboardSection" style="margin-top:1.5rem;">
+      <h3>Scoreboard</h3>
+      <table id="scoreboardTable">
+        <thead>
+          <tr><th>Team</th><th>Score</th></tr>
+        </thead>
+        <tbody id="scoreboardBody">
+          <tr><td colspan="2">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    const lobbyCode = localStorage.getItem('lobbyCode');
+    const playerId = localStorage.getItem('playerId');
+    const playerName = localStorage.getItem('playerName');
+    const isHost = localStorage.getItem('isHost') === 'true';
+
+    if (!lobbyCode || !playerId || !playerName) {
+      alert('Missing lobby or player info. Redirecting...');
+      window.location.href = 'join.html';
+    }
+
+    const roundTitleEl = document.getElementById('roundTitle');
+    const roleTextEl = document.getElementById('roleText');
+
+    const playerSection = document.getElementById('playerSection');
+    const hostSection = document.getElementById('hostSection');
+
+    const questionListEl = document.getElementById('questionList');
+    const playerStatusEl = document.getElementById('playerStatus');
+    const submitAnswersBtn = document.getElementById('submitAnswersBtn');
+
+    const hostQuestionListEl = document.getElementById('hostQuestionList');
+    const submissionInfoEl = document.getElementById('submissionInfo');
+    const startGradingBtn = document.getElementById('startGradingBtn');
+    const hostStatusEl = document.getElementById('hostStatus');
+
+    const gradingSection = document.getElementById('gradingSection');
+    const gradeQuestionTextEl = document.getElementById('gradeQuestionText');
+    const gradeCorrectAnswerEl = document.getElementById('gradeCorrectAnswer');
+    const gradeTeamNameEl = document.getElementById('gradeTeamName');
+    const gradeTeamAnswerEl = document.getElementById('gradeTeamAnswer');
+    const gradePointsEl = document.getElementById('gradePoints');
+    const gradeProgressEl = document.getElementById('gradeProgress');
+    const gradingStatusEl = document.getElementById('gradingStatus');
+    const gradingCardEl = document.getElementById('gradingCard');
+    const gradeCorrectBtn = document.getElementById('gradeCorrectBtn');
+    const gradeIncorrectBtn = document.getElementById('gradeIncorrectBtn');
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+
+    const scoreboardBody = document.getElementById('scoreboardBody');
+
+    let currentRoundIndex = 0;
+    let currentQuestions = [];
+    let gradingCurrentItem = null;
+    let gameFinished = false;
+
+    roleTextEl.textContent = isHost
+      ? `You are the host (${playerName}).`
+      : `You are playing as ${playerName}.`;
+
+    if (isHost) {
+      hostSection.style.display = 'block';
+    } else {
+      playerSection.style.display = 'block';
+    }
+
+    // ---------- Helpers ----------
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+      if (!res.ok) {
+        const errMsg = data && data.error ? data.error : 'Request failed.';
+        throw new Error(errMsg);
+      }
+      return data;
+    }
+
+    // ---------- Load Round Info ----------
+    async function loadRoundInfo() {
+      try {
+        const data = await fetchJSON(`/api/game/roundInfo?code=${encodeURIComponent(lobbyCode)}&playerId=${encodeURIComponent(playerId)}`);
+
+        currentRoundIndex = data.roundIndex;
+        currentQuestions = data.questions || [];
+
+        roundTitleEl.textContent = `Round ${data.roundIndex + 1}: ${data.roundTitle}`;
+        if (isHost) {
+          // show questions and point values (no answers)
+          hostQuestionListEl.innerHTML = '';
+          currentQuestions.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = 'question';
+            div.innerHTML = `<strong>Q${idx + 1} (${q.points} pts):</strong> ${q.text}`;
+            hostQuestionListEl.appendChild(div);
+          });
+
+          const subText = data.allSubmitted
+            ? `All ${data.totalPlayers} teams have submitted answers.`
+            : `${data.submittedCount}/${data.totalPlayers} teams have submitted. You may start grading at any time; non-submitted teams get 0.`;
+          submissionInfoEl.textContent = subText;
+        } else {
+          // build answer form for players
+          questionListEl.innerHTML = '';
+          currentQuestions.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = 'question';
+            div.innerHTML = `
+              <label>Q${idx + 1} (${q.points} pts): ${q.text}</label>
+              <input type="text" name="answer-${idx}" required />
+            `;
+            questionListEl.appendChild(div);
+          });
+
+          if (data.hasSubmitted) {
+            // already submitted, disable form and show message
+            submitAnswersBtn.disabled = true;
+            playerStatusEl.textContent = 'Answers submitted. Waiting for grading...';
+            playerStatusEl.className = 'status';
+          } else {
+            submitAnswersBtn.disabled = false;
+            playerStatusEl.textContent = '';
+            playerStatusEl.className = 'status';
+          }
+        }
+      } catch (err) {
+        console.error('loadRoundInfo error:', err);
+        if (!isHost) {
+          playerStatusEl.textContent = err.message;
+          playerStatusEl.className = 'status error';
+        } else {
+          hostStatusEl.textContent = err.message;
+          hostStatusEl.className = 'status error';
+        }
+      }
+    }
+
+    // ---------- Player: Submit Answers ----------
+    const answerForm = document.getElementById('answerForm');
+    if (answerForm) {
+      answerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isHost) return; // host doesn't submit answers
+
+        const answers = currentQuestions.map((q, idx) => {
+          const input = answerForm.querySelector(`input[name="answer-${idx}"]`);
+          return input ? input.value.trim() : '';
+        });
+
+        submitAnswersBtn.disabled = true;
+        playerStatusEl.textContent = 'Submitting answers...';
+        playerStatusEl.className = 'status';
+
+        try {
+          await fetchJSON('/api/game/submitAnswers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: lobbyCode,
+              playerId,
+              roundIndex: currentRoundIndex,
+              answers
+            })
+          });
+
+          playerStatusEl.textContent = 'Answers submitted! Waiting for host to grade.';
+          playerStatusEl.className = 'status success';
+
+          // After submitting, show scoreboard (already visible) and just wait.
+        } catch (err) {
+          console.error('submitAnswers error:', err);
+          playerStatusEl.textContent = err.message;
+          playerStatusEl.className = 'status error';
+          submitAnswersBtn.disabled = false;
+        }
+      });
+    }
+
+    // ---------- Host: Start Grading ----------
+    if (startGradingBtn) {
+      startGradingBtn.addEventListener('click', async () => {
+        if (!isHost) return;
+
+        hostStatusEl.textContent = 'Starting grading...';
+        hostStatusEl.className = 'status';
+
+        try {
+          const data = await fetchJSON('/api/game/startGrading', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: lobbyCode, playerId })
+          });
+
+          hostStatusEl.textContent = `Grading started. Items to grade: ${data.gradingItems}.`;
+          hostStatusEl.className = 'status success';
+
+          // switch to grading UI
+          document.getElementById('hostQuestions').style.display = 'none';
+          gradingSection.style.display = 'block';
+          loadNextGradeItem();
+        } catch (err) {
+          console.error('startGrading error:', err);
+          hostStatusEl.textContent = err.message;
+          hostStatusEl.className = 'status error';
+        }
+      });
+    }
+
+    // ---------- Host: Load Next Grade Item ----------
+    async function loadNextGradeItem() {
+      gradingStatusEl.textContent = 'Loading next answer...';
+      gradingStatusEl.className = 'status';
+
+      try {
+        const data = await fetchJSON(`/api/game/nextGradeItem?code=${encodeURIComponent(lobbyCode)}&playerId=${encodeURIComponent(playerId)}`);
+
+        if (data.done) {
+          gradingStatusEl.textContent = 'Grading complete for this round. Scores have been updated.';
+          gradingStatusEl.className = 'status success';
+          gradingCardEl.style.display = 'none';
+          nextRoundBtn.style.display = 'inline-block';
+          refreshScoreboard();
+          return;
+        }
+
+        const item = data.item;
+        gradingCurrentItem = item;
+
+        gradeQuestionTextEl.textContent = item.questionText;
+        gradeCorrectAnswerEl.textContent = item.correctAnswer;
+        gradeTeamNameEl.textContent = item.playerName;
+        gradeTeamAnswerEl.textContent = item.playerAnswer;
+        gradePointsEl.textContent = item.points;
+        gradeProgressEl.textContent = `${item.currentIndex} / ${item.totalItems}`;
+
+        gradingStatusEl.textContent = '';
+        gradingStatusEl.className = 'status';
+        gradingCardEl.style.display = 'block';
+      } catch (err) {
+        console.error('nextGradeItem error:', err);
+        gradingStatusEl.textContent = err.message;
+        gradingStatusEl.className = 'status error';
+      }
+    }
+
+    // ---------- Host: Submit Grade ----------
+    function makeGradeHandler(isCorrect) {
+      return async () => {
+        if (!gradingCurrentItem) return;
+
+        gradingStatusEl.textContent = 'Recording grade...';
+        gradingStatusEl.className = 'status';
+
+        try {
+          await fetchJSON('/api/game/submitGrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: lobbyCode,
+              playerId,
+              targetPlayerId: gradingCurrentItem.playerId,
+              roundIndex: gradingCurrentItem.roundIndex,
+              questionIndex: gradingCurrentItem.questionIndex,
+              correct: isCorrect
+            })
+          });
+
+          gradingCurrentItem = null;
+          refreshScoreboard(); // scores won't change until grading ends, but safe
+          loadNextGradeItem();
+        } catch (err) {
+          console.error('submitGrade error:', err);
+          gradingStatusEl.textContent = err.message;
+          gradingStatusEl.className = 'status error';
+        }
+      };
+    }
+
+    gradeCorrectBtn.addEventListener('click', makeGradeHandler(true));
+    gradeIncorrectBtn.addEventListener('click', makeGradeHandler(false));
+
+    // ---------- Host: Next Round ----------
+    nextRoundBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      nextRoundBtn.disabled = true;
+      gradingStatusEl.textContent = 'Moving to next round...';
+      gradingStatusEl.className = 'status';
+
+      try {
+        const data = await fetchJSON('/api/game/nextRound', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: lobbyCode, playerId })
+        });
+
+        if (data.finished) {
+          gradingStatusEl.textContent = 'Game finished! Final scores shown below.';
+          gradingStatusEl.className = 'status success';
+          gameFinished = true;
+          return;
+        }
+
+        // Reload page for simplicity
+        window.location.reload();
+      } catch (err) {
+        console.error('nextRound error:', err);
+        gradingStatusEl.textContent = err.message;
+        gradingStatusEl.className = 'status error';
+        nextRoundBtn.disabled = false;
+      }
+    });
+
+    // ---------- Scoreboard Polling ----------
+    async function refreshScoreboard() {
+      try {
+        const data = await fetchJSON(`/api/game/scoreboard?code=${encodeURIComponent(lobbyCode)}`);
+
+        scoreboardBody.innerHTML = '';
+        data.players.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${p.name}</td><td>${p.score}</td>`;
+          scoreboardBody.appendChild(tr);
+        });
+
+        if (data.phase === 'finished') {
+          gameFinished = true;
+        }
+      } catch (err) {
+        console.error('scoreboard error:', err);
+        scoreboardBody.innerHTML = `<tr><td colspan="2">Error loading scoreboard.</td></tr>`;
+      }
+    }
+
+    setInterval(() => {
+      if (!gameFinished) {
+        refreshScoreboard();
+      }
+    }, 3000);
+
+    // Initial load
+    loadRoundInfo();
+    refreshScoreboard();
+  </script>
 </body>
 </html>

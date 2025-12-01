@@ -1,19 +1,33 @@
 <script>
-  // Read URL parameters
   const url = new URL(window.location.href);
   const paramCode = url.searchParams.get("code");
   const paramId = url.searchParams.get("playerId");
   const paramName = url.searchParams.get("name");
   const paramHost = url.searchParams.get("isHost");
 
-  // If parameters exist, store them in localStorage
-  if (paramCode && paramId && paramName) {
+  const hasLocalIdentity =
+    localStorage.getItem("playerId") &&
+    localStorage.getItem("playerName") &&
+    localStorage.getItem("lobbyCode");
+
+  // Only set identity if this tab does NOT already have one
+  if (!hasLocalIdentity && paramCode && paramId && paramName) {
     localStorage.setItem("lobbyCode", paramCode);
     localStorage.setItem("playerId", paramId);
     localStorage.setItem("playerName", paramName);
     localStorage.setItem("isHost", paramHost === "true");
   }
+
+  // Remove parameters so refresh can't break identity
+  if (paramCode || paramId || paramName) {
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+  }
 </script>
+
+
+
+
 
 <!DOCTYPE html>
 <html lang="en">
